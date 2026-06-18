@@ -3,7 +3,7 @@ __pycache__/
 *.pyc
 .env
 quran_bot.db
-data/
+
 *.mp3
 *.wav
 *.ogg
