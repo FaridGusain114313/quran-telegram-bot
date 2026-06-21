@@ -393,8 +393,8 @@ async def play_verse_audio(update: Update, context: ContextTypes.DEFAULT_TYPE, s
 async def ziyarat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Ziyarətlər menyusu"""
     keyboard = [
-        [InlineKeyboardButton("📜 Ziyarəti-Əşura", callback_data="ziyarat_ashura")],
-        # [InlineKeyboardButton("📜 Ziyarəti-...", callback_data="ziyarat_...")], # Sonra əlavə etmək üçün
+        [InlineKeyboardButton("📜 Ziyarəti-Əşura (Ərəbcə)", callback_data="ziyarat_ashura_ar")],
+        [InlineKeyboardButton("📖 Ziyarəti-Əşura (Tərcümə)", callback_data="ziyarat_ashura_az")],
         [InlineKeyboardButton("🔙 Geri", callback_data="main_menu")]
     ]
     
@@ -403,14 +403,16 @@ async def ziyarat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
+    
+    
 
-async def show_ziyarat_ashura(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Ziyarəti-Əşuranı göstərir"""
+async def show_ziyarat_ashura_ar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Ziyarəti-Əşuranı ərəbcə göstərir"""
     query = update.callback_query
     
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT content_ar, content_az FROM ziyarat WHERE title_az = 'Ziyarəti-Əşura'")
+    cursor.execute("SELECT content_ar FROM ziyarat WHERE title_az = 'Ziyarəti-Əşura'")
     result = cursor.fetchone()
     conn.close()
     
@@ -418,33 +420,62 @@ async def show_ziyarat_ashura(update: Update, context: ContextTypes.DEFAULT_TYPE
         await query.edit_message_text("❌ Ziyarət tapılmadı!")
         return
     
-    content_ar, content_az = result
+    content_ar = result[0]
     
-    # Mesaj çox uzun olarsa, hissələrə bölək
-    # Əvvəlcə ərəbcə mətni göndərək
-    await query.message.reply_text(
-        f"📜 *Ziyarəti-Əşura (Ərəbcə)*\n\n{content_ar[:4000]}",
-        parse_mode="Markdown"
-    )
-    
-    # Sonra tərcüməni göndərək
     keyboard = [[InlineKeyboardButton("🔙 Ziyarətlərə qayıt", callback_data="ziyarat_menu")]]
     
-    await query.message.reply_text(
-        f"📜 *Ziyarəti-Əşura (Azərbaycanca)*\n\n{content_az[:4000]}",
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-    
-    # Əgər mətin çox uzundursa, davamını göndərək
-    if len(content_az) > 4000:
+    # Uzun mətni hissələrə böl (əgər lazımdırsa)
+    if len(content_ar) > 4000:
         await query.message.reply_text(
-            content_az[4000:8000],
+            f"📜 *Ziyarəti-Əşura (Ərəbcə)*\n\n{content_ar[:4000]}",
             parse_mode="Markdown"
         )
+        await query.message.reply_text(
+            content_ar[4000:8000],
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    else:
+        await query.message.reply_text(
+            f"📜 *Ziyarəti-Əşura (Ərəbcə)*\n\n{content_ar}",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
 
-
-
+async def show_ziyarat_ashura_az(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Ziyarəti-Əşuranı Azərbaycanca göstərir"""
+    query = update.callback_query
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT content_az FROM ziyarat WHERE title_az = 'Ziyarəti-Əşura'")
+    result = cursor.fetchone()
+    conn.close()
+    
+    if not result:
+        await query.edit_message_text("❌ Ziyarət tapılmadı!")
+        return
+    
+    content_az = result[0]
+    
+    keyboard = [[InlineKeyboardButton("🔙 Ziyarətlərə qayıt", callback_data="ziyarat_menu")]]
+    
+    if len(content_az) > 4000:
+        await query.message.reply_text(
+            f"📖 *Ziyarəti-Əşura (Azərbaycanca)*\n\n{content_az[:4000]}",
+            parse_mode="Markdown"
+        )
+        await query.message.reply_text(
+            content_az[4000:8000],
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    else:
+        await query.message.reply_text(
+            f"📖 *Ziyarəti-Əşura (Azərbaycanca)*\n\n{content_az}",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
 
 # ==================== BUTON HANDLER ====================
 
@@ -481,10 +512,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif data == "ziyarat_menu":
             await ziyarat_menu(update, context)
 
-        elif data == "ziyarat_ashura":
-            await show_ziyarat_ashura(update, context)
-        
+        elif data == "ziyarat_ashura_ar":
+            await show_ziyarat_ashura_ar(update, context)
             
+        elif data == "ziyarat_ashura_az":
+            await show_ziyarat_ashura_az(update, context)
+
         elif data.startswith("audio_surahs_"):
             parts = data.split("_")
             page = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 0
