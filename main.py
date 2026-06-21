@@ -23,16 +23,20 @@ user_data = {}
 
 # ==================== BAŞLANGIÇ VƏ MENYULAR ====================
 
+# main.py - start funksiyası
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("📖 Qurani-Kerim Oxu", callback_data="surahs_0")],
         [InlineKeyboardButton("🎵 Qurani-Kerim Dinlə", callback_data="audio_surahs_0")],
         [InlineKeyboardButton("🌙 Təsadüfi Ayə", callback_data="random")],
         [InlineKeyboardButton("🔍 Axtarış", callback_data="search")],
+        [InlineKeyboardButton("📜 Ziyarətlər", callback_data="ziyarat_menu")],  # YENİ
         [InlineKeyboardButton("📜 Hədislər", callback_data="hadiths")],
         [InlineKeyboardButton("📚 Nəhсül-Bəlağə", callback_data="nahjul")],
         [InlineKeyboardButton("📘 Biharul-Ənvar", callback_data="bihar")]
     ]
+    # ... qalan kod
     
     welcome_text = (
         "🌙 *Salam, Quran Bot-a xoş gəldiniz!*\n\n"
@@ -383,6 +387,65 @@ async def play_verse_audio(update: Update, context: ContextTypes.DEFAULT_TYPE, s
     else:
         await update.callback_query.message.reply_text("❌ Audio tapılmadı!")
 
+
+# main.py - yeni funksiyalar
+
+async def ziyarat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Ziyarətlər menyusu"""
+    keyboard = [
+        [InlineKeyboardButton("📜 Ziyarəti-Əşura", callback_data="ziyarat_ashura")],
+        # [InlineKeyboardButton("📜 Ziyarəti-...", callback_data="ziyarat_...")], # Sonra əlavə etmək üçün
+        [InlineKeyboardButton("🔙 Geri", callback_data="main_menu")]
+    ]
+    
+    await update.callback_query.edit_message_text(
+        "📜 *Ziyarətlər*\n\nZiyarət mətnini seçin:",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def show_ziyarat_ashura(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Ziyarəti-Əşuranı göstərir"""
+    query = update.callback_query
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT content_ar, content_az FROM ziyarat WHERE title_az = 'Ziyarəti-Əşura'")
+    result = cursor.fetchone()
+    conn.close()
+    
+    if not result:
+        await query.edit_message_text("❌ Ziyarət tapılmadı!")
+        return
+    
+    content_ar, content_az = result
+    
+    # Mesaj çox uzun olarsa, hissələrə bölək
+    # Əvvəlcə ərəbcə mətni göndərək
+    await query.message.reply_text(
+        f"📜 *Ziyarəti-Əşura (Ərəbcə)*\n\n{content_ar[:4000]}",
+        parse_mode="Markdown"
+    )
+    
+    # Sonra tərcüməni göndərək
+    keyboard = [[InlineKeyboardButton("🔙 Ziyarətlərə qayıt", callback_data="ziyarat_menu")]]
+    
+    await query.message.reply_text(
+        f"📜 *Ziyarəti-Əşura (Azərbaycanca)*\n\n{content_az[:4000]}",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    
+    # Əgər mətin çox uzundursa, davamını göndərək
+    if len(content_az) > 4000:
+        await query.message.reply_text(
+            content_az[4000:8000],
+            parse_mode="Markdown"
+        )
+
+
+
+
 # ==================== BUTON HANDLER ====================
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -412,6 +475,15 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
         elif data == "random":
             await random_verse(update, context)
+
+        # main.py - button_handler daxilində
+
+        elif data == "ziyarat_menu":
+            await ziyarat_menu(update, context)
+
+        elif data == "ziyarat_ashura":
+            await show_ziyarat_ashura(update, context)
+        
             
         elif data.startswith("audio_surahs_"):
             parts = data.split("_")
