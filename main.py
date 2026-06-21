@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputFile
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
+
+
 # Audio handler-ları import et
 from handlers.audio_handlers import show_audio_surahs, play_surah_audio
 
@@ -15,6 +17,7 @@ load_dotenv()
 
 TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 DB_PATH = os.getenv('DATABASE_PATH', 'quran_bot.db')
+GROUP_LINK = os.getenv('GROUP_LINK', 'https://t.me/quran_bot_group')
 
 def get_db():
     return sqlite3.connect(DB_PATH)
@@ -31,11 +34,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🎵 Qurani-Kerim Dinlə", callback_data="audio_surahs_0")],
         [InlineKeyboardButton("🌙 Təsadüfi Ayə", callback_data="random")],
         [InlineKeyboardButton("🔍 Axtarış", callback_data="search")],
-        [InlineKeyboardButton("📜 Ziyarətlər", callback_data="ziyarat_menu")],  # YENİ
+        [InlineKeyboardButton("📜 Ziyarətlər", callback_data="ziyarat_menu")],
+        [InlineKeyboardButton("🏴 Heyhat_minnez_zillet", url=GROUP_LINK)],  # ✅ YENİ
         [InlineKeyboardButton("📜 Hədislər", callback_data="hadiths")],
         [InlineKeyboardButton("📚 Nəhсül-Bəlağə", callback_data="nahjul")],
         [InlineKeyboardButton("📘 Biharul-Ənvar", callback_data="bihar")]
     ]
+    # ... qalan kod
     # ... qalan kod
     
     welcome_text = (
@@ -56,6 +61,8 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🎵 Qurani-Kerim Dinlə", callback_data="audio_surahs_0")],
         [InlineKeyboardButton("🌙 Təsadüfi Ayə", callback_data="random")],
         [InlineKeyboardButton("🔍 Axtarış", callback_data="search")],
+        [InlineKeyboardButton("📜 Ziyarətlər", callback_data="ziyarat_menu")],
+        [InlineKeyboardButton("🏴 Heyhat_minnez_zillet", url=GROUP_LINK)],  # ✅ YENİ
         [InlineKeyboardButton("📜 Hədislər", callback_data="hadiths")],
         [InlineKeyboardButton("📚 Nəhсül-Bəlağə", callback_data="nahjul")],
         [InlineKeyboardButton("📘 Biharul-Ənvar", callback_data="bihar")]
