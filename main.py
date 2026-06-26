@@ -1,4 +1,3 @@
-# main.py - TAM VERSİYA (Bütün funksiyalar daxildir)
 import os
 import sqlite3
 import asyncio
@@ -7,8 +6,6 @@ from io import BytesIO
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputFile
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
-
-
 
 # Audio handler-ları import et
 from handlers.audio_handlers import show_audio_surahs, play_surah_audio
@@ -24,9 +21,77 @@ def get_db():
 
 user_data = {}
 
-# ==================== BAŞLANGIÇ VƏ MENYULAR ====================
+# ==================== GİZLİ QAPI (GOCHAT) ====================
 
-# main.py - start funksiyası
+# İstifadəçi klik sayını saxlamaq üçün
+user_gochat_clicks = {}
+
+# 🔥 Öz Telegram ID-nizi yazın (isteğe bağlı - yalnız sizin üçün)
+ALLOWED_USER_ID = 123456789  # Öz ID-nizi yazın! [@userinfobot](https://t.me/userinfobot)
+
+async def gochat(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/gochat komandası - gizli qapı"""
+    user_id = update.effective_user.id
+    
+    # 🔥 Yalnız sizin üçün aktiv etmək istəyirsinizsə, aşağıdakı şərhi silin
+    # if user_id != ALLOWED_USER_ID:
+    #     await update.message.reply_text("❌ Bilinməyən əmr!")
+    #     return
+    
+    # Klik sayını sıfırla
+    user_gochat_clicks[user_id] = 0
+    
+    keyboard = [
+        [InlineKeyboardButton("🔄 Yenidən cəhd et", callback_data="gochat_click")]
+    ]
+    
+    await update.message.reply_text(
+        "🔍 *Axtarışınız uğurla nəticələnmədi.*\n"
+        "Zəhmət olmasa *'Yenidən cəhd et'* düyməsinə 3 dəfə klikləyin.",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+
+async def gochat_click_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Yenidən cəhd et düyməsinə klikləndikdə"""
+    query = update.callback_query
+    user_id = update.effective_user.id
+    
+    # Klik sayını artır
+    if user_id not in user_gochat_clicks:
+        user_gochat_clicks[user_id] = 0
+    user_gochat_clicks[user_id] += 1
+    
+    click_count = user_gochat_clicks[user_id]
+    
+    if click_count >= 3:
+        # 🔥 3-cü klikdə gizli linki göstər
+        await query.message.edit_text(
+            "🔓 *Gizli qapı açıldı!*\n\n"
+            "📍 https://mychatapp-production-c2ce.up.railway.app/",  # 🔥 Linki dəyişin!
+            parse_mode="Markdown"
+        )
+        # Klik sayını sıfırla
+        user_gochat_clicks[user_id] = 0
+    else:
+        # Hələ 3 klik olmayıb
+        remaining = 3 - click_count
+        await query.answer(f"⏳ {remaining} klik qaldı!")
+        
+        # Mesajı yeniləmə
+        keyboard = [
+            [InlineKeyboardButton(f"🔄 Yenidən cəhd et ({remaining} klik qaldı)", callback_data="gochat_click")]
+        ]
+        await query.edit_message_text(
+            "🔍 *Axtarışınız uğurla nəticələnmədi.*\n"
+            f"Zəhmət olmasa *'Yenidən cəhd et'* düyməsinə {remaining} dəfə klikləyin.",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+# ==================== BAŞLANGIÇ VƏ MENYULAR ====================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
@@ -35,13 +100,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🌙 Təsadüfi Ayə", callback_data="random")],
         [InlineKeyboardButton("🔍 Axtarış", callback_data="search")],
         [InlineKeyboardButton("📜 Ziyarətlər", callback_data="ziyarat_menu")],
-        [InlineKeyboardButton("🏴 Heyhat_minnez_zillet", url=GROUP_LINK)],  # ✅ YENİ
+        [InlineKeyboardButton("🏴 Heyhat_minnez_zillet", url=GROUP_LINK)],
         [InlineKeyboardButton("📜 Hədislər", callback_data="hadiths")],
         [InlineKeyboardButton("📚 Nəhсül-Bəlağə", callback_data="nahjul")],
         [InlineKeyboardButton("📘 Biharul-Ənvar", callback_data="bihar")]
     ]
-    # ... qalan kod
-    # ... qalan kod
     
     welcome_text = (
         "🌙 *Salam, Quran Bot-a xoş gəldiniz!*\n\n"
@@ -62,7 +125,7 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🌙 Təsadüfi Ayə", callback_data="random")],
         [InlineKeyboardButton("🔍 Axtarış", callback_data="search")],
         [InlineKeyboardButton("📜 Ziyarətlər", callback_data="ziyarat_menu")],
-        [InlineKeyboardButton("🏴 Heyhat_minnez_zillet", url=GROUP_LINK)],  # ✅ YENİ
+        [InlineKeyboardButton("🏴 Heyhat_minnez_zillet", url=GROUP_LINK)],
         [InlineKeyboardButton("📜 Hədislər", callback_data="hadiths")],
         [InlineKeyboardButton("📚 Nəhсül-Bəlağə", callback_data="nahjul")],
         [InlineKeyboardButton("📘 Biharul-Ənvar", callback_data="bihar")]
@@ -394,8 +457,7 @@ async def play_verse_audio(update: Update, context: ContextTypes.DEFAULT_TYPE, s
     else:
         await update.callback_query.message.reply_text("❌ Audio tapılmadı!")
 
-
-# main.py - yeni funksiyalar
+# ==================== ZİYARƏTLƏR ====================
 
 async def ziyarat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Ziyarətlər menyusu"""
@@ -410,8 +472,6 @@ async def ziyarat_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
-    
-    
 
 async def show_ziyarat_ashura_ar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Ziyarəti-Əşuranı ərəbcə göstərir"""
@@ -431,7 +491,6 @@ async def show_ziyarat_ashura_ar(update: Update, context: ContextTypes.DEFAULT_T
     
     keyboard = [[InlineKeyboardButton("🔙 Ziyarətlərə qayıt", callback_data="ziyarat_menu")]]
     
-    # Uzun mətni hissələrə böl (əgər lazımdırsa)
     if len(content_ar) > 4000:
         await query.message.reply_text(
             f"📜 *Ziyarəti-Əşura (Ərəbcə)*\n\n{content_ar[:4000]}",
@@ -514,8 +573,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif data == "random":
             await random_verse(update, context)
 
-        # main.py - button_handler daxilində
-
         elif data == "ziyarat_menu":
             await ziyarat_menu(update, context)
 
@@ -524,6 +581,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
         elif data == "ziyarat_ashura_az":
             await show_ziyarat_ashura_az(update, context)
+
+        elif data == "gochat_click":  # ✅ GİZLİ QAPI KLİK
+            await gochat_click_handler(update, context)
 
         elif data.startswith("audio_surahs_"):
             parts = data.split("_")
@@ -598,11 +658,11 @@ def main():
     print("🚀 Quran Bot başladılır...")
     print(f"📊 Database: {DB_PATH}")
     
-    # ⚡ Timeout-ları artır
     app = Application.builder().token(TOKEN).connect_timeout(120.0).read_timeout(120.0).build()
     
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("search", search))
+    app.add_handler(CommandHandler("gochat", gochat))  # ✅ GİZLİ QAPI
     app.add_handler(CallbackQueryHandler(button_handler))
     
     print("✅ Bot işə hazırdır!")
