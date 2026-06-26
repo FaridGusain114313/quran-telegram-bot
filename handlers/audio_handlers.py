@@ -14,7 +14,7 @@ def get_db():
 # Audio cache
 _surah_audio_cache = {}
 
-def get_surah_audio_from_disk(surah_no: int, mp3_folder: str = "Quran_mp3"):
+def get_surah_audio_from_disk(surah_no: int, mp3_folder: str = "Qurani-Kerim"):
     """Surə audio faylını diskdən oxuyur"""
     if surah_no in _surah_audio_cache:
         audio_data = _surah_audio_cache[surah_no]
