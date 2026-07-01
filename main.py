@@ -52,8 +52,6 @@ async def gochat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-
-
 async def gochat_click_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Yenidən cəhd et düyməsinə klikləndikdə"""
     query = update.callback_query
@@ -223,6 +221,49 @@ async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(response, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 # ==================== SURƏLƏR (MƏTN) ====================
+
+async def show_surahs(update: Update, context: ContextTypes.DEFAULT_TYPE, page=0):
+    """Surələrin siyahısını göstərir (10-luq hissələrlə)"""
+    user_id = update.effective_user.id
+    if user_id not in user_data:
+        user_data[user_id] = {}
+    user_data[user_id]['surah_page'] = page
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    per_page = 10
+    offset = page * per_page
+    
+    cursor.execute("SELECT order_no, name_az, verses_count FROM surahs ORDER BY order_no LIMIT ? OFFSET ?", (per_page, offset))
+    surah_list = cursor.fetchall()
+    
+    cursor.execute("SELECT COUNT(*) FROM surahs")
+    total = cursor.fetchone()[0]
+    conn.close()
+    
+    total_pages = (total + per_page - 1) // per_page
+    
+    keyboard = []
+    for order, name, verses in surah_list:
+        keyboard.append([InlineKeyboardButton(f"{order}. {name} ({verses})", callback_data=f"surah_{order}")])
+    
+    nav_row = []
+    if page > 0:
+        nav_row.append(InlineKeyboardButton("◀️ Əvvəlki", callback_data=f"surahs_{page-1}"))
+    if page + 1 < total_pages:
+        nav_row.append(InlineKeyboardButton("Sonrakı ▶️", callback_data=f"surahs_{page+1}"))
+    if nav_row:
+        keyboard.append(nav_row)
+    
+    keyboard.append([InlineKeyboardButton("🏠 Əsas menyu", callback_data="main_menu")])
+    
+    msg = f"📖 *Surələr* ({page+1}/{total_pages})\n\nSurə adına klikləyin:"
+    
+    if update.callback_query:
+        await update.callback_query.edit_message_text(msg, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+    else:
+        await update.message.reply_text(msg, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def show_surah(update: Update, context: ContextTypes.DEFAULT_TYPE, surah_order: int, part: int = 0):
     user_id = update.effective_user.id
@@ -540,7 +581,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif data == "ziyarat_ashura_az":
             await show_ziyarat_ashura_az(update, context)
 
-        elif data == "gochat_click":  # ✅ GİZLİ QAPI KLİK
+        elif data == "gochat_click":
             await gochat_click_handler(update, context)
 
         elif data.startswith("audio_surahs_"):
@@ -620,7 +661,7 @@ def main():
     
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("search", search))
-    app.add_handler(CommandHandler("gochat", gochat))  # ✅ GİZLİ QAPI
+    app.add_handler(CommandHandler("gochat", gochat))
     app.add_handler(CallbackQueryHandler(button_handler))
     
     print("✅ Bot işə hazırdır!")
