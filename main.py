@@ -6,9 +6,9 @@ from io import BytesIO
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputFile
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
-
 # Audio handler-ları import et
 from handlers.audio_handlers import show_audio_surahs, play_surah_audio
+from handlers.ziyarat_handlers import show_ziyarat_ashura_ar, show_ziyarat_ashura_az
 
 load_dotenv()
 
